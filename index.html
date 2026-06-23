@@ -2,125 +2,148 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>R&D Job-Suche Bot</title>
     <style>
-        body { font-family: sans-serif; background: #f8fafc; color: #334155; padding: 24px; }
-        .container { max-width: 1100px; margin: 0 auto; }
-        .header { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .btn { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #f8fafc; color: #334155; margin: 0; padding: 24px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; margin-bottom: 16px; }
+        h1 { margin: 0; font-size: 22px; color: #0f172a; }
+        .subtitle { margin: 4px 0 0 0; font-size: 14px; color: #64748b; }
+        .btn { background-color: #2563eb; color: white; border: none; font-weight: 500; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn:hover { background-color: #1d4ed8; }
+        .btn:disabled { background-color: #94a3b8; cursor: not-allowed; }
         .status { padding: 14px; border-radius: 6px; font-size: 14px; margin-bottom: 16px; border-left: 4px solid; }
         .status-info { background: #eff6ff; border-left-color: #3b82f6; color: #1d4ed8; }
         .status-load { background: #fefce8; border-left-color: #eab308; color: #a16207; }
         .status-success { background: #f0fdf4; border-left-color: #22c55e; color: #166534; }
         .status-error { background: #fef2f2; border-left-color: #ef4444; color: #991b1b; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-        th { background: #f8fafc; font-weight: 600; color: #475569; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #fee2e2; color: #991b1b; }
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th { background: #f8fafc; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; }
+        td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        tr:hover { background-color: #f8fafc; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-wien { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .badge-at { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+        .badge-eu { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+        .job-title { font-weight: 600; color: #2563eb; text-decoration: none; font-size: 15px; }
+        .job-title:hover { text-decoration: underline; }
+        .source-text { font-size: 12px; color: #64748b; margin-top: 4px; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
+
     <div class="container">
         <div class="header">
             <div>
-                <h1 style="margin:0;font-size:22px;">🤖 R&D Leadership Job-Bot</h1>
-                <p style="margin:4px 0 0 0;font-size:14px;color:#64748b;">Filter: ≤ 60 Tage | Live-Abfrage</p>
+                <h1>🤖 R&D Leadership Job-Bot (Google-Programm)</h1>
+                <p class="subtitle">Regionen: 1. Wien | 2. Rest-Österreich | 3. EU-Ausland</p>
             </div>
-            <button id="refreshBtn" onclick="starteJobSuche()" class="btn">🔄 Jobs jetzt aktualisieren</button>
+            <button id="refreshBtn" onclick="starteGoogleJobSuche()" class="btn">
+                🔄 Tabelle jetzt aktualisieren
+            </button>
         </div>
-        <div id="statusMessage" class="status status-info">Klicke auf den Button, um die Live-Jobsuche zu starten.</div>
-        <div id="tableContainer" class="hidden">
+
+        <div id="statusMessage" class="status status-info">
+            Klicke auf den Button, um die Live-Suche über das Google-Programmnetzwerkes zu starten.
+        </div>
+
+        <div class="table-container hidden" id="tableContainer">
             <table>
                 <thead>
-                    <tr><th>Region</th><th>Position & Alter</th><th>Firma</th><th>Ort</th><th>Aktion</th></tr>
+                    <tr>
+                        <th style="width: 15%;">Region</th>
+                        <th style="width: 60%;">Offene Stelle & Direkt-Link</th>
+                        <th style="width: 25%;">Quelle</th>
+                    </tr>
                 </thead>
                 <tbody id="jobTableBody"></tbody>
             </table>
         </div>
     </div>
-     <script type="text/javascript">
-        var KEY = "26722b30b9msh4b267f474cc7bb9p10a2bejsnbe83298f8d45";
-        var QUERIES = ["Director R&D Vienna", "Leiter Produktentwicklung Österreich"];
 
-        async function starteJobSuche() {
-            var btn = document.getElementById('refreshBtn');
-            var status = document.getElementById('statusMessage');
-            var tableBody = document.getElementById('jobTableBody');
-            
-            btn.disabled = true;
-            status.className = "status status-load";
-            status.innerText = "Verbindung zu den Jobbörsen wird aufgebaut... Bitte warten...";
-            tableBody.innerHTML = "";
-            
-            var alleJobs = [];
-            for (var i = 0; i < QUERIES.length; i++) {
-                try {
-                    var url = "https://rapidapi.com" + encodeURIComponent(QUERIES[i]) + "&page=1&num_pages=1&date_posted=all";
-                    var res = await fetch(url, { method: 'GET', headers: { 'X-RapidAPI-Key': KEY, 'X-RapidAPI-Host': '://rapidapi.com' } });
-                    if (res.ok) {
-                        var json = await res.json();
-                        if (json.data) alleJobs = alleJobs.concat(json.data);
-                    }
-                } catch (e) { console.error(e); }
-            }
-            zegeDaten(alleJobs);
-        }
+    <script type="text/javascript">
+        // DEINE GOOGLE SEARCH ENGINE ID HIER EINTRAGEN:
+        var GOOGLE_CX = "DEINE_SUCHMASCHINEN_ID"; 
 
-        function zegeDaten(jobs) {
+        // Deine exakten Wunsch-Suchkriterien gebündelt für Google (Führung & R&D)
+        var SUCHBEGRIFF = '"Hiring" ("Vice President" OR "Director" OR "Leiter" OR "Head") ("R&D" OR "Produktentwicklung" OR "Technology") ("Vienna" OR "Wien" OR "Austria" OR "Österreich")';
+
+        async function starteGoogleJobSuche() {
             var btn = document.getElementById('refreshBtn');
             var status = document.getElementById('statusMessage');
             var tableContainer = document.getElementById('tableContainer');
             var tableBody = document.getElementById('jobTableBody');
-            btn.disabled = false;
 
-            if (!jobs || jobs.length === 0) {
+            btn.disabled = true;
+            status.className = "status status-load";
+            status.innerText = "Google durchsucht das freigegebene Netzwerk... Bitte warten...";
+            tableBody.innerHTML = "";
+
+            if (GOOGLE_CX === "d21bfca679f1141fc" || GOOGLE_CX === "") {
                 status.className = "status status-error";
-                status.innerText = "Keine Verbindung oder keine Jobs gefunden.";
+                status.innerText = "🚨 Bitte trage zuerst deine Google-Suchmaschinen-ID im Code ein!";
+                btn.disabled = false;
                 return;
             }
 
-            var gesehen = new Set();
-            var zaehler = 0;
-            var HEUTE = new Date();
-
-            for (var j = 0; j < jobs.length; j++) {
-                var job = jobs[j];
-                if (gesehen.has(job.job_id)) continue;
+            try {
+                // dateRestrict=m2 schränkt die Suche knallhart auf die letzten 60 Tage ein
+                var url = "https://googleapis.com" + GOOGLE_CX + "&q=" + encodeURIComponent(SUCHBEGRIFF) + "&dateRestrict=m2";
                 
-                var postDatum = job.job_posted_at_datetime_utc ? new Date(job.job_posted_at_datetime_utc) : null;
-                var tageAlt = "Neu";
-                if (postDatum) {
-                    var diff = Math.floor((HEUTE - postDatum) / (1000 * 60 * 60 * 24));
-                    if (diff > 60) continue;
-                    tageAlt = "vor " + diff + " Tagen";
+                var response = await fetch(url);
+                var data = await response.json();
+
+                if (data.items && data.items.length > 0) {
+                    var verarbeiteteJobs = [];
+
+                    for (var i = 0; i < data.items.length; i++) {
+                        var item = data.items[i];
+                        var text = (item.title + " " + item.snippet).toLowerCase();
+
+                        // Regionen-Priorisierung zuweisen
+                        var prioNum = 3; var prioText = "3. EU / Global"; var badgeClass = "badge-eu";
+                        if (text.includes("wien") || text.includes("vienna")) {
+                            prioNum = 1; prioText = "1. Wien"; badgeClass = "badge-wien";
+                        } else if (text.includes("austria") || text.includes("österreich") || text.includes("at")) {
+                            prioNum = 2; prioText = "2. Österreich"; badgeClass = "badge-at";
+                        }
+
+                        verarbeiteteJobs.push({
+                            prioNum: prioNum, prioText: prioText, badgeClass: badgeClass,
+                            titel: item.title,
+                            firma: item.displayLink,
+                            link: item.link
+                        });
+                    }
+
+                    // Sortieren: Wien zuerst
+                    verarbeiteteJobs.sort(function(a, b) { return a.prioNum - b.prioNum; });
+
+                    status.className = "status status-success";
+                    status.innerText = "Erfolgreich! " + verarbeiteteJobs.length + " aktuelle Ausschreibungen im Netzwerk gefunden.";
+                    tableContainer.classList.remove('hidden');
+
+                    for (var j = 0; j < verarbeiteteJobs.length; j++) {
+                        var job = verarbeiteteJobs[j];
+                        tableBody.innerHTML += "<tr>" +
+                            "<td><span class='badge " + job.badgeClass + "'>" + job.prioText + "</span></td>" +
+                            "<td><a href='" + job.link + "' target='_blank' class='job-title'>" + job.titel + " ↗</a><div class='source-text'>Klicken für den direkten Ausschreibungstext</div></td>" +
+                            "<td><strong style='color:#475569;'>" + job.firma + "</strong></td>" +
+                        "</tr>";
+                    }
+
+                } else {
+                    status.className = "status status-error";
+                    status.innerText = "Die Verbindung steht! Google hat jedoch in den letzten 60 Tage keine neuen passenden Ausschreibungen auf dieser Domain indexiert.";
                 }
-
-                gesehen.add(job.job_id);
-                zaehler++;
-
-                var stadt = (job.job_city || "").toLowerCase();
-                var prio = "3. EU / Global";
-                if (stadt.includes("wien") || stadt.includes("vienna")) { prio = "1. Wien"; }
-                else if ((job.job_country || "").toLowerCase() === "at") { prio = "2. Österreich"; }
-
-                tableBody.innerHTML += "<tr>" +
-                    "<td><span class='badge'>" + prio + "</span></td>" +
-                    "<td><strong>" + job.job_title + "</strong><br><small style='color:#94a3b8'>📅 " + tageAlt + "</small></td>" +
-                    "<td>" + job.employer_name + "</td>" +
-                    "<td>📍 " + (job.job_city || "AT") + "</td>" +
-                    "<td><a href='" + job.job_apply_link + "' target='_blank' style='color:#2563eb;'>Link ↗</a></td>" +
-                "</tr>";
-            }
-
-            if (zaehler === 0) {
+            } catch (error) {
                 status.className = "status status-error";
-                status.innerText = "Es wurden Jobs gefunden, aber alle waren älter als 60 Tage.";
-            } else {
-                status.className = "status status-success";
-                status.innerText = "Erfolgreich! " + zaehler + " aktuelle Jobs geladen.";
-                tableContainer.classList.remove('hidden');
+                status.innerText = "🚨 Systemfehler: " + error.message;
             }
+            btn.disabled = false;
         }
     </script>
 </body>
