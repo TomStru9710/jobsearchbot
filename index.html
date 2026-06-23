@@ -47,7 +47,7 @@
         </div>
 
         <div id="statusMessage" class="status status-info">
-            Klicke auf den Button, um die Live-Suche über das Google-Programmnetzwerkes zu starten.
+            Klicke auf den Button, um die Live-Suche über das Google-Programmnetzwerk zu starten.
         </div>
 
         <div class="table-container hidden" id="tableContainer">
@@ -56,7 +56,7 @@
                     <tr>
                         <th style="width: 15%;">Region</th>
                         <th style="width: 60%;">Offene Stelle & Direkt-Link</th>
-                        <th style="width: 25%;">Quelle</th>
+                        <th style="width: 25%;">Quelle / Firma</th>
                     </tr>
                 </thead>
                 <tbody id="jobTableBody"></tbody>
@@ -65,11 +65,11 @@
     </div>
 
     <script type="text/javascript">
-        // DEINE GOOGLE SEARCH ENGINE ID HIER EINTRAGEN:
-        var GOOGLE_CX = "DEINE_SUCHMASCHINEN_ID"; 
+        // DEINE GOOGLE SEARCH ENGINE ID IST HIER BEREITS EINGEBAUT:
+        var GOOGLE_CX = "d21bfca679f1141fc"; 
 
-        // Deine exakten Wunsch-Suchkriterien gebündelt für Google (Führung & R&D)
-        var SUCHBEGRIFF = '"Hiring" ("Vice President" OR "Director" OR "Leiter" OR "Head") ("R&D" OR "Produktentwicklung" OR "Technology") ("Vienna" OR "Wien" OR "Austria" OR "Österreich")';
+        // Deine Wunsch-Suchkriterien gebündelt für Google (Führung & R&D)
+        var SUCHBEGRIFF = '"Hiring" AND ("Vice President" OR "Director" OR "Leiter" OR "Head" OR "CTO") AND ("R&D" OR "Produktentwicklung" OR "Technology") AND ("Vienna" OR "Wien" OR "Austria" OR "Österreich")';
 
         async function starteGoogleJobSuche() {
             var btn = document.getElementById('refreshBtn');
@@ -79,15 +79,8 @@
 
             btn.disabled = true;
             status.className = "status status-load";
-            status.innerText = "Google durchsucht das freigegebene Netzwerk... Bitte warten...";
+            status.innerText = "Google durchsucht deine hinterlegten Jobportale... Bitte warten...";
             tableBody.innerHTML = "";
-
-            if (GOOGLE_CX === "d21bfca679f1141fc" || GOOGLE_CX === "") {
-                status.className = "status status-error";
-                status.innerText = "🚨 Bitte trage zuerst deine Google-Suchmaschinen-ID im Code ein!";
-                btn.disabled = false;
-                return;
-            }
 
             try {
                 // dateRestrict=m2 schränkt die Suche knallhart auf die letzten 60 Tage ein
@@ -111,10 +104,13 @@
                             prioNum = 2; prioText = "2. Österreich"; badgeClass = "badge-at";
                         }
 
+                        // Sauberen Firmennamen aus der Domain extrahieren
+                        var domain = item.displayLink.replace("www.", "");
+
                         verarbeiteteJobs.push({
                             prioNum: prioNum, prioText: prioText, badgeClass: badgeClass,
                             titel: item.title,
-                            firma: item.displayLink,
+                            firma: domain,
                             link: item.link
                         });
                     }
@@ -123,7 +119,7 @@
                     verarbeiteteJobs.sort(function(a, b) { return a.prioNum - b.prioNum; });
 
                     status.className = "status status-success";
-                    status.innerText = "Erfolgreich! " + verarbeiteteJobs.length + " aktuelle Ausschreibungen im Netzwerk gefunden.";
+                    status.innerText = "Erfolgreich! " + verarbeiteteJobs.length + " aktuelle Ausschreibungen gefunden.";
                     tableContainer.classList.remove('hidden');
 
                     for (var j = 0; j < verarbeiteteJobs.length; j++) {
@@ -137,7 +133,7 @@
 
                 } else {
                     status.className = "status status-error";
-                    status.innerText = "Die Verbindung steht! Google hat jedoch in den letzten 60 Tage keine neuen passenden Ausschreibungen auf dieser Domain indexiert.";
+                    status.innerText = "Die Verbindung steht! Google hat jedoch in den letzten 60 Tagen keine neuen passenden Ausschreibungen auf deinen hinterlegten Portalen indexiert.";
                 }
             } catch (error) {
                 status.className = "status status-error";
