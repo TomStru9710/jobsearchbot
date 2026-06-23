@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R&D Job-Suche Bot</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #f8fafc; color: #334155; margin: 0; padding: 24px; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .header { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; border: 1px solid #e2e8f0; margin-bottom: 16px; }
+        h1 { margin: 0; font-size: 22px; color: #0f172a; }
+        .subtitle { margin: 4px 0 0 0; font-size: 14px; color: #64748b; }
+        .btn { background-color: #2563eb; color: white; border: none; font-weight: 500; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn:hover { background-color: #1d4ed8; }
+        .btn:disabled { background-color: #94a3b8; cursor: not-allowed; }
+        .status { padding: 14px; border-radius: 6px; font-size: 14px; margin-bottom: 16px; border-left: 4px solid; }
+        .status-info { background: #eff6ff; border-left-color: #3b82f6; color: #1d4ed8; }
+        .status-load { background: #fefce8; border-left-color: #eab308; color: #a16207; }
+        .status-success { background: #f0fdf4; border-left-color: #22c55e; color: #166534; }
+        .status-error { background: #fef2f2; border-left-color: #ef4444; color: #991b1b; }
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th { background: #f8fafc; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; }
+        td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        tr:hover { background-color: #f8fafc; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-wien { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .badge-at { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+        .badge-eu { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+        .job-title { font-weight: 600; color: #0f172a; margin-bottom: 2px; }
+        .job-date { font-size: 11px; color: #94a3b8; }
+        .link-action { color: #2563eb; font-weight: 500; text-decoration: none; }
+        .link-action:hover { text-decoration: underline; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🤖 R&D Leadership Job-Bot</h1>
+                <p class="subtitle">Filter: ≤ 60 Tage alt | Wien, Österreich & EU inkl. Tabak-Konzerne</p>
+            </div>
+            <button id="refreshBtn" onclick="starteJobSuche()" class="btn">
+                🔄 Jobs jetzt aktualisieren
+            </button>
+        </div>
+
+        <div id="statusMessage" class="status status-info">
+            Klicke auf den Button, um die Live-Jobsuche zu starten.
+        </div>
+
+        <div class="table-container hidden" id="tableContainer">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Priorität</th>
+                        <th style="width: 45%;">Position / Alter</th>
+                        <th style="width: 20%;">Firma</th>
+                        <th style="width: 15%;">Ort</th>
+                        <th style="width: 5%;">Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="jobTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const RAPIDAPI_KEY = "26722b30b9msh4b267f474cc7bb9p10a2bejsnbe83298f8d45"; 
+
+        // Die vollständige Liste deiner Suchkriterien
+        const QUERIES = [
+            "Director R&D Vienna",
+            "Vice President R&D Vienna",
+            "Global Head R&D Vienna",
+            "Leiter Produktentwicklung Österreich",
+            "Entwicklungsleiter Österreich",
+            "Philip Morris R&D",
+            "British American Tobacco R&D",
+            "Imperial Brands R&D",
+            "Japan Tobacco International R&D"
+        ];
+
+        async function starteJobSuche() {
+            const btn = document.getElementById('refreshBtn');
+            const status = document.getElementById('statusMessage');
+            const tableContainer = document.getElementById('tableContainer');
+            const tableBody = document.getElementById('jobTableBody');
+
+            btn.disabled = true;
+            status.className = "status status-load";
+            status.innerText = "Die Live-Daten werden abgerufen und auf 60 Tage Gültigkeit geprüft. Bitte warten...";
+            tableBody.innerHTML = "";
+
+            let alleJobs = [];
+
+            for (let query of QUERIES) {
+                try {
+                    const url = `https://rapidapi.com{encodeURIComponent(query)}&page=1&num_pages=1&employment_types=FULLTIME`;
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: { 
+                            'X-RapidAPI-Key': RAPIDAPI_KEY, 
+                            'X-RapidAPI-Host': '://rapidapi.com' 
+                        }
+                    });
+
+                    if (!response.ok) {
+                        status.className = "status status-error";
+                        status.innerText = `🚨 API-Fehler! Status-Code: ${response.status}. Bitte stelle sicher, dass das JSearch-Abo auf RapidAPI aktiv ist.`;
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    const result = await response.json();
+                    if (result.data) {
+                        alleJobs = alleJobs.concat(result.data);
+                    }
+                } catch (error) {
+                    status.className = "status status-error";
+                    status.innerText = `🚨 Netzwerk-Fehler: ${error.message}`;
+                    btn.disabled = false;
+                    return;
+                }
+            }
+
+            const verarbeiteteJobs = verarbeiteJobDaten(alleJobs);
+            zeigeErgebnisse(verarbeiteteJobs);
+        }
+
+        function verarbeiteJobDaten(jobs) {
+            let gefilterteJobs = [];
+            let gesehenenIds = new Set();
+            const HEUTE = new Date();
+
+            for (let job of jobs) {
+                if (gesehenenIds.has(job.job_id)) continue;
+
+                // 1. FILTER: Max 60 Tage alt
+                let postDatum = job.job_posted_at_datetime_utc ? new Date(job.job_posted_at_datetime_utc) : null;
+                if (!postDatum && job.job_posted_at_timestamp) {
+                    postDatum = new Date(job.job_posted_at_timestamp * 1000);
+                }
+                
+                if (postDatum) {
+                    const unterschiedInTagen = Math.floor((HEUTE - postDatum) / (1000 * 60 * 60 * 24));
+                    if (unterschiedInTagen > 60) continue; 
+                    job.tageAlt = unterschiedInTagen;
+                } else {
+                    job.tageAlt = "Neu";
+                }
+
+                // 2. FILTER: Direkt-Link ermitteln
+                let finalerLink = job.job_apply_link;
+                if (job.job_apply_options && job.job_apply_options.length > 0) {
+                    const tieferLink = job.job_apply_options.find(opt => opt.apply_link.includes('linkedin') || opt.apply_link.includes('workday') || opt.apply_link.includes('jobs'));
+                    if (tieferLink) finalerLink = tieferLink.apply_link;
+                }
+
+                gesehenenIds.add(job.job_id);
+
+                const stadt = (job.job_city || "").toLowerCase();
+                const land = (job.job_country || "").toLowerCase();
+
+                let prioNum = 3;
+                let prioText = "3. EU / Global";
+                let badgeClass = "badge-eu";
+
+                if (stadt.includes("wien") || stadt.includes("vienna")) {
+                    prioNum = 1; prioText = "1. Wien"; badgeClass = "badge-wien";
+                } else if (land === "at" || stadt.includes("österreich") || stadt.includes("austria")) {
+                    prioNum = 2; prioText = "2. Österreich"; badgeClass = "badge-at";
+                }
+
+                gefilterteJobs.push({
+                    prioNum, prioText, badgeClass,
+                    titel: job.job_title,
+                    firma: job.employer_name,
+                    ort: (job.job_city ? job.job_city + ", " : "") + (job.job_country || "").toUpperCase(),
+                    link: finalerLink,
+                    alterText: typeof job.tageAlt === 'number' ? `vor ${job.tageAlt} Tagen` : "Aktuell"
+                });
+            }
+
+            // Sortieren nach Priorität (Wien zuerst)
+            return gefilterteJobs.sort((a, b) => a.prioNum - b.prioNum);
+        }
+
+        function zeigeErgebnisse(jobs) {
+            const btn = document.getElementById('refreshBtn');
+            const status = document.getElementById('statusMessage');
+            const tableContainer = document.getElementById('tableContainer');
+            const tableBody = document.getElementById('jobTableBody');
+
+            btn.disabled = false;
+
+            if (jobs.length === 0) {
+                status.className = "status status-error";
+                status.innerText = "Aktuell keine passenden neuen Führungspositionen (≤ 60 Tage) gefunden.";
+                tableContainer.classList.add('hidden');
+                return;
+            }
+
