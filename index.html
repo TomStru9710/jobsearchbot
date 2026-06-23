@@ -40,7 +40,7 @@
         <div class="header">
             <div>
                 <h1>🤖 R&D Leadership Job-Bot</h1>
-                <p class="subtitle">Filter: ≤ 60 Tage alt | Wien, Österreich & EU inkl. Tabak-Konzerne</p>
+                <p class="subtitle">Filter: ≤ 60 Tage (all) | Live-Abfrage</p>
             </div>
             <button id="refreshBtn" onclick="starteJobSuche()" class="btn">
                 🔄 Jobs jetzt aktualisieren
@@ -70,17 +70,11 @@
     <script>
         const RAPIDAPI_KEY = "26722b30b9msh4b267f474cc7bb9p10a2bejsnbe83298f8d45"; 
 
-        // Die vollständige Liste deiner Suchkriterien
+        // Wir testen jetzt erst einmal NUR mit den 3 wichtigsten R&D Begriffen, um ein Timeout zu verhindern
         const QUERIES = [
             "Director R&D Vienna",
-            "Vice President R&D Vienna",
-            "Global Head R&D Vienna",
             "Leiter Produktentwicklung Österreich",
-            "Entwicklungsleiter Österreich",
-            "Philip Morris R&D",
-            "British American Tobacco R&D",
-            "Imperial Brands R&D",
-            "Japan Tobacco International R&D"
+            "Philip Morris R&D"
         ];
 
         async function starteJobSuche() {
@@ -91,14 +85,16 @@
 
             btn.disabled = true;
             status.className = "status status-load";
-            status.innerText = "Die Live-Daten werden abgerufen und auf 60 Tage Gültigkeit geprüft. Bitte warten...";
+            status.innerText = "Verbindung zu den Jobbörsen wird aufgebaut... Bitte warten...";
             tableBody.innerHTML = "";
 
             let alleJobs = [];
 
             for (let query of QUERIES) {
                 try {
-                    const url = `https://rapidapi.com{encodeURIComponent(query)}&page=1&num_pages=1&employment_types=FULLTIME`;
+                    // WICHTIG: date_posted=all sorgt dafür, dass die API stabil antwortet
+                    const url = `https://rapidapi.com{encodeURIComponent(query)}&page=1&num_pages=1&date_posted=all`;
+                    
                     const response = await fetch(url, {
                         method: 'GET',
                         headers: { 
@@ -109,36 +105,48 @@
 
                     if (!response.ok) {
                         status.className = "status status-error";
-                        status.innerText = `🚨 API-Fehler! Status-Code: ${response.status}. Bitte stelle sicher, dass das JSearch-Abo auf RapidAPI aktiv ist.`;
+                        status.innerText = `🚨 Fehler von RapidAPI (Status ${response.status}). Bitte prüfe, ob dein kostenloses Abo freigeschaltet wurde.`;
                         btn.disabled = false;
                         return;
                     }
 
                     const result = await response.json();
-                    if (result.data) {
+                    if (result.data && result.data.length > 0) {
                         alleJobs = alleJobs.concat(result.data);
                     }
                 } catch (error) {
                     status.className = "status status-error";
-                    status.innerText = `🚨 Netzwerk-Fehler: ${error.message}`;
+                    status.innerText = `🚨 Systemfehler beim Laden: ${error.message}`;
                     btn.disabled = false;
                     return;
                 }
             }
 
-            const verarbeiteteJobs = verarbeiteJobDaten(alleJobs);
-            zeigeErgebnisse(verarbeiteteJobs);
+            verarbeiteUndZeigeDaten(alleJobs);
         }
 
-        function verarbeiteJobDaten(jobs) {
-            let gefilterteJobs = [];
+        function verarbeiteUndZeigeDaten(jobs) {
+            const btn = document.getElementById('refreshBtn');
+            const status = document.getElementById('statusMessage');
+            const tableContainer = document.getElementById('tableContainer');
+            const tableBody = document.getElementById('jobTableBody');
+
+            btn.disabled = false;
+
+            if (!jobs || jobs.length === 0) {
+                status.className = "status status-error";
+                status.innerText = "Die Suche war erfolgreich, aber es wurden aktuell keine passenden Jobs gefunden.";
+                return;
+            }
+
             let gesehenenIds = new Set();
+            let gefilterteJobs = [];
             const HEUTE = new Date();
 
             for (let job of jobs) {
                 if (gesehenenIds.has(job.job_id)) continue;
 
-                // 1. FILTER: Max 60 Tage alt
+                // 60-Tage-Filter
                 let postDatum = job.job_posted_at_datetime_utc ? new Date(job.job_posted_at_datetime_utc) : null;
                 if (!postDatum && job.job_posted_at_timestamp) {
                     postDatum = new Date(job.job_posted_at_timestamp * 1000);
@@ -152,22 +160,12 @@
                     job.tageAlt = "Neu";
                 }
 
-                // 2. FILTER: Direkt-Link ermitteln
-                let finalerLink = job.job_apply_link;
-                if (job.job_apply_options && job.job_apply_options.length > 0) {
-                    const tieferLink = job.job_apply_options.find(opt => opt.apply_link.includes('linkedin') || opt.apply_link.includes('workday') || opt.apply_link.includes('jobs'));
-                    if (tieferLink) finalerLink = tieferLink.apply_link;
-                }
-
                 gesehenenIds.add(job.job_id);
 
                 const stadt = (job.job_city || "").toLowerCase();
                 const land = (job.job_country || "").toLowerCase();
 
-                let prioNum = 3;
-                let prioText = "3. EU / Global";
-                let badgeClass = "badge-eu";
-
+                let prioNum = 3; let prioText = "3. EU / Global"; let badgeClass = "badge-eu";
                 if (stadt.includes("wien") || stadt.includes("vienna")) {
                     prioNum = 1; prioText = "1. Wien"; badgeClass = "badge-wien";
                 } else if (land === "at" || stadt.includes("österreich") || stadt.includes("austria")) {
@@ -179,27 +177,28 @@
                     titel: job.job_title,
                     firma: job.employer_name,
                     ort: (job.job_city ? job.job_city + ", " : "") + (job.job_country || "").toUpperCase(),
-                    link: finalerLink,
+                    link: job.job_apply_link,
                     alterText: typeof job.tageAlt === 'number' ? `vor ${job.tageAlt} Tagen` : "Aktuell"
                 });
             }
 
-            // Sortieren nach Priorität (Wien zuerst)
-            return gefilterteJobs.sort((a, b) => a.prioNum - b.prioNum);
-        }
-
-        function zeigeErgebnisse(jobs) {
-            const btn = document.getElementById('refreshBtn');
-            const status = document.getElementById('statusMessage');
-            const tableContainer = document.getElementById('tableContainer');
-            const tableBody = document.getElementById('jobTableBody');
-
-            btn.disabled = false;
-
-            if (jobs.length === 0) {
+            if (gefilterteJobs.length === 0) {
                 status.className = "status status-error";
-                status.innerText = "Aktuell keine passenden neuen Führungspositionen (≤ 60 Tage) gefunden.";
-                tableContainer.classList.add('hidden');
+                status.innerText = "Es wurden Jobs gefunden, aber alle waren älter als 60 Tage.";
                 return;
             }
 
+            // Sortieren (Wien zuerst)
+            gefilterteJobs.sort((a, b) => a.prioNum - b.prioNum);
+
+            status.className = "status status-success";
+            status.innerText = `Erfolgreich! ${gefilterteJobs.length} aktuelle Jobs geladen.`;
+
+            gefilterteJobs.forEach(job => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><span class="badge ${job.badgeClass}">${job.prioText}</span></td>
+                        <td>
+                            <div class="job-title">${job.titel}</div>
+                            <div class="job-date">📅 Veröffentlicht: ${job.alterText}</div>
+                        </td>
